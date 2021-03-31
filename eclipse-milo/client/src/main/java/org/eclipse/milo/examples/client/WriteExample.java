@@ -1,0 +1,69 @@
+/*
+ * Copyright (c) 2019 the Eclipse Milo Authors
+ *
+ * This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License 2.0
+ * which is available at https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ */
+
+package org.eclipse.milo.examples.client;
+
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+import com.google.common.collect.ImmutableList;
+import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
+import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
+import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
+import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
+import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class WriteExample implements ClientExample {
+
+	public static void main(String[] args) throws Exception {
+		WriteExample example = new WriteExample();
+
+		new ClientExampleRunner(example).run();
+	}
+
+	private final Logger logger = LoggerFactory.getLogger(getClass());
+
+	@Override
+	public void run(OpcUaClient client, CompletableFuture<OpcUaClient> future) throws Exception {
+		// synchronous connect
+		client.connect().get();
+		NodeId nodeId_Tag1 = new NodeId(2, "FE6.AFSM.AFSM010_WriteRFID");
+//		AFSM010_WriteRFID
+		List<NodeId> nodeIds = ImmutableList.of(nodeId_Tag1);
+		logger.info("here, begin to prepare data ... " + nodeIds.toString());
+		Variant v = new Variant("1");
+	
+		// don't write status or timestamps
+		DataValue dv = new DataValue(v);
+		logger.info("here, begin to write data ... " + dv.toString());
+		// write asynchronously....
+		CompletableFuture<List<StatusCode>> f = client.writeValues(nodeIds, ImmutableList.of(dv));
+		
+		// ...but block for the results so we write in order
+		List<StatusCode> statusCodes = f.get();
+		StatusCode status = statusCodes.get(0);
+
+		if (status.isGood()) {
+			logger.info("Wrote '{}' to nodeId={}", v, nodeIds.get(0));
+		}
+		logger.info("Wrote '{}' to nodeId={}", v, status.toString());
+		future.complete(client);
+		
+		
+//		NodeId nodeIds = new NodeId(3,"\"AFSM010_WriteRFID\"");
+//		Variant variant = new Variant(1);
+//		DataValue value = new DataValue(variant , null ,null );
+//		StatusCode statusCode = client.writeValue(nodeIds, value).get();
+//		logger.info(statusCode.toString());
+	}
+
+}
